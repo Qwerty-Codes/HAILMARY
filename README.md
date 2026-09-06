@@ -42,7 +42,7 @@ India's Antarctic research stations (**Maitri** & **Bharati**) operate in one of
 
 ### Live Dashboard
 - **5 Hero Cards** — Temperature, Wind, Solar, Battery SOC, System Risk Score
-- **24-Hour Energy Balance Chart** — Load vs Renewables (Plotly.js)
+- **24-Hour Energy Balance Chart** — Load vs Renewables
 - **Animated Energy Flow Diagram** — real-time power routing visualization
 - **Live Environment Overrides** — inject extreme conditions (Polar Night, Severe Storm, Extreme Cold) to stress-test the grid
 - **Automatic Load Shedding** — AI drops non-critical loads during emergencies
@@ -152,7 +152,7 @@ HAILMARY/
 | Frontend | Vanilla JS, HTML5, CSS3 |
 | Charting | Plotly.js |
 | CSV Parsing | PapaParse.js |
-| Deployment | Vercel (static) |
+| Deployment | Vercel (Dynamic)|
 
 ---
 
