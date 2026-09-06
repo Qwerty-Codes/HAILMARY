@@ -106,7 +106,7 @@ Open your browser to: **http://localhost:8000/accu_frontend/**
 
 ## Live Demo
 
-Deployed on Vercel: [hailmary.vercel.app](https://hailmary.vercel.app)
+Deployed on Vercel: [hailmary-gamma.vercel.app](https://hailmary-gamma.vercel.app/accu_frontend/)
 
 ---
 
