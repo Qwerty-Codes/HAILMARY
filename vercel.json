@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/accu_frontend/",
+      "permanent": false
+    }
+  ]
+}
