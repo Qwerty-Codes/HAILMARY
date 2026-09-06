@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polar Station Energy Management System</title>
+    <style>/* ===== RESET & BASE ===== */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #000000;
+    --bg-card: #111111;
+    --border: #333333;
+    --text: #ffffff;
+    --text-mid: #aaaaaa;
+    --text-dim: #666666;
+}
+
+body {
+    font-family: 'Roboto', 'Samsung Sans', system-ui, -apple-system, sans-serif;
+    background: #000000;
+    color: var(--text);
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+    cursor: grab;
+}
+
+body:active {
+    cursor: grabbing;
+}
+
+/* ===== HUD BAR ===== */
+.hud-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: #000000;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 100;
+}
+
+.hud-left {
+    display: flex;
+    align-items: center;
+}
+
+.station-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.badge-icon {
+    font-size: 20px;
+}
+
+.badge-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.station-name {
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    color: #fff;
+}
+
+.station-subtitle {
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.hud-center {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.hud-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.stat-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+}
+
+.stat-value.solar,
+.stat-value.wind,
+.stat-value.diesel,
+.stat-value.temp {
+    color: #fff;
+}
+
+.hud-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--border);
+}
+
+.hud-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.time-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 500;
+    color: #fff;
+}
+
+.date-display {
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+/* ===== CANVAS ===== */
+.canvas-container {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    background: #000000;
+}
+
+#stationCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* ===== TOOLTIP ===== */
+.tooltip {
+    position: absolute;
+    background: #000000;
+    border: 1px solid #fff;
+    padding: 14px;
+    min-width: 230px;
+    max-width: 300px;
+    z-index: 200;
+    pointer-events: none;
+}
+
+.tooltip-header {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.tooltip-body {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-mid);
+}
+
+.tooltip-body .tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.tooltip-body .tooltip-value {
+    font-family: 'JetBrains Mono', monospace;
+    color: #fff;
+    font-weight: 500;
+}
+
+/* ===== BOTTOM PANEL ===== */
+.bottom-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    transition: transform 0.3s ease;
+}
+
+.bottom-panel.collapsed {
+    transform: translateY(calc(100% - 34px));
+}
+
+.panel-toggle {
+    height: 34px;
+    background: #000000;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+}
+
+.panel-toggle:hover {
+    color: #fff;
+}
+
+.panel-content {
+    height: 130px;
+    background: #000000;
+    border-top: 1px solid var(--border);
+    padding: 10px 24px;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.power-grid {
+    display: flex;
+    gap: 10px;
+    height: 100%;
+    min-width: max-content;
+}
+
+.power-card {
+    flex: 0 0 170px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.power-card:hover {
+    border-color: #fff;
+}
+
+.power-card .card-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-mid);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.power-card .card-power {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.power-card .card-bar-bg {
+    height: 3px;
+    background: #222;
+    overflow: hidden;
+}
+
+.power-card .card-bar {
+    height: 100%;
+    background: #fff;
+    transition: width 0.5s ease;
+}
+
+.power-card .card-detail {
+    font-size: 10px;
+    color: var(--text-dim);
+}
+
+/* ===== CONTROLS ===== */
+.controls {
+    position: fixed;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 100;
+}
+
+.ctrl-btn {
+    width: 36px;
+    height: 36px;
+    background: #000000;
+    border: 1px solid var(--border);
+    color: var(--text-mid);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.ctrl-btn:hover {
+    border-color: #fff;
+    color: #fff;
+}
+
+.ctrl-btn.active {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
+.ctrl-separator {
+    height: 1px;
+    background: var(--border);
+    margin: 2px 0;
+}
+
+/* ===== LEGEND ===== */
+.legend {
+    position: fixed;
+    left: 16px;
+    bottom: 190px;
+    background: #000000;
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    z-index: 100;
+    transition: bottom 0.3s ease;
+}
+
+.bottom-panel.collapsed ~ .legend {
+    bottom: 56px;
+}
+
+.legend-title {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-mid);
+    margin-bottom: 4px;
+}
+
+.legend-color {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    background: #fff !important;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+    height: 4px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #333;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+</style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Top HUD Bar -->
+    <div class="hud-bar">
+        <div class="hud-left">
+            <div class="station-badge">
+                <div class="badge-icon">❄️</div>
+                <div class="badge-text">
+                    <span class="station-name">Polar Research Station</span>
+                    <span class="station-subtitle">Antarctica • 70°46'S 11°44'E</span>
+                </div>
+            </div>
+        </div>
+        <div class="hud-center">
+            <div class="hud-stat">
+                <span class="stat-label">TOTAL LOAD</span>
+                <span class="stat-value" id="totalLoad">0 kW</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-stat">
+                <span class="stat-label">SOLAR</span>
+                <span class="stat-value" id="solarPower">0 kW</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-stat">
+                <span class="stat-label">WIND</span>
+                <span class="stat-value" id="windPower">0 kW</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-stat">
+                <span class="stat-label">BACKUP</span>
+                <span class="stat-value" id="dieselPower">0 kW</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-stat">
+                <span class="stat-label">OUTSIDE</span>
+                <span class="stat-value" id="outsideTemp">-35°C</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-stat">
+                <span class="stat-label">DOME</span>
+                <span class="stat-value" id="domeTemp">7°C</span>
+            </div>
+        </div>
+        <div class="hud-right">
+            <div class="time-display" id="timeDisplay">00:00:00</div>
+            <div class="date-display" id="dateDisplay">2026-09-05</div>
+        </div>
+    </div>
+
+    <!-- Main Canvas Area -->
+    <div class="canvas-container" id="canvasContainer">
+        <canvas id="stationCanvas"></canvas>
+        <div class="tooltip" id="tooltip" style="display:none;">
+            <div class="tooltip-header" id="tooltipHeader"></div>
+            <div class="tooltip-body" id="tooltipBody"></div>
+        </div>
+    </div>
+
+    <!-- Bottom Panel -->
+    <div class="bottom-panel" id="bottomPanel">
+        <div class="panel-toggle" id="panelToggle">
+            <span>▲ Power Grid Overview</span>
+        </div>
+        <div class="panel-content" id="panelContent">
+            <div class="power-grid" id="powerGrid"></div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button class="ctrl-btn" id="zoomIn" title="Zoom In">+</button>
+        <button class="ctrl-btn" id="zoomOut" title="Zoom Out">−</button>
+        <button class="ctrl-btn" id="resetView" title="Reset View">⌂</button>
+        <div class="ctrl-separator"></div>
+        <button class="ctrl-btn" id="toggleLabels" title="Toggle Labels">🏷</button>
+        <button class="ctrl-btn" id="togglePower" title="Toggle Power">⚡</button>
+        <button class="ctrl-btn" id="toggleSnow" title="Toggle Snow">❄</button>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-title">Zone Types</div>
+        <div class="legend-item"><span class="legend-color"></span>Science & Research</div>
+        <div class="legend-item"><span class="legend-color"></span>Technical & Operations</div>
+        <div class="legend-item"><span class="legend-color"></span>Living & Wellbeing</div>
+        <div class="legend-item"><span class="legend-color"></span>Energy Infrastructure</div>
+        <div class="legend-item"><span class="legend-color"></span>External Facilities</div>
+    </div>
+
+    <script>const BUILDING_CATEGORIES = {
+    science: { label: 'Science & Research', icon: '🔬' },
+    technical: { label: 'Technical & Operations', icon: '⚙️' },
+    living: { label: 'Living & Wellbeing', icon: '🏠' },
+    energy: { label: 'Energy Infrastructure', icon: '⚡' },
+    external: { label: 'External Facilities', icon: '🚁' }
+};
+
+// Grid unit = 8.1 meters
+const BUILDINGS = [
+    {
+        id: 'energy_ring', name: 'Energy Ring', category: 'energy', icon: '⭕',
+        shape: 'ring', cx: 0, cy: 0, radius: 10.5, z: 0, h_z: 0.2,
+        basePower: -1000, description: '170m circular ring with 1,800m² PV panels and 10x 70kW Darrieus wind turbines.'
+    },
+    {
+        id: 'vcv_base', name: 'VCV Technical Base', category: 'technical', icon: '🔧',
+        shape: 'box', x: -4, y: -4, w: 8, h: 8, z: 0, h_z: 1.5,
+        basePower: 120, description: '64.8m square technical rooms, workshops, snow groomer garages, and emergency groups.'
+    },
+    {
+        id: 'vcv_living', name: 'VCV Living Floor', category: 'living', icon: '👥',
+        shape: 'box', x: -5, y: -5, w: 10, h: 10, z: 1.5, h_z: 1.5,
+        basePower: 180, description: '81m square living floor with bedrooms, kitchen, fitness, and central square.'
+    },
+    {
+        id: 'vcv_dome', name: 'Bioclimatic Dome', category: 'science', icon: '🌐',
+        shape: 'dome', cx: 0, cy: 0, radius: 6.5, z: 0, h_z: 4,
+        basePower: 80, description: '105m spherical cap maintaining 4-11°C with circadian lighting and outdoor feel.'
+    },
+    {
+        id: 'sci_platform', name: 'Scientific Platform', category: 'science', icon: '📡',
+        shape: 'box', x: -1, y: -1, w: 2, h: 2, z: 4, h_z: 0.5,
+        basePower: 40, description: '16.2m square platform for scientific measuring equipment.'
+    },
+    {
+        id: 'hangar_1', name: 'Industrial Hangar A', category: 'external', icon: '🏭',
+        shape: 'box', x: 14, y: -7, w: 5, h: 4, z: 0, h_z: 2,
+        basePower: 30, description: 'Helicopter garage and product stock.'
+    },
+    {
+        id: 'hangar_2', name: 'Industrial Hangar B', category: 'external', icon: '🏭',
+        shape: 'box', x: 14, y: -2, w: 5, h: 4, z: 0, h_z: 2,
+        basePower: 30, description: 'Refuge area and non-daily use storage.'
+    },
+    {
+        id: 'helipad', name: 'Helipad', category: 'external', icon: '🚁',
+        shape: 'circle', cx: 16.5, cy: 4, radius: 2.5, z: 0, h_z: 0.1,
+        basePower: 10, description: 'Landing zone for helicopters.'
+    }
+];
+
+const ROADS = [
+    { x: 10, y: -2.5, w: 4, h: 1 },
+    { x: 13, y: -8, w: 1, h: 14 },
+    { x: 15.5, y: 2, w: 2, h: 2 }
+];
+
+const POWER_LINES = [
+    { x1: 10.5, y1: -2, x2: 13.5, y2: -2 },
+    { x1: 13.5, y1: -2, x2: 14, y2: -5 },
+    { x1: 13.5, y1: -2, x2: 14, y2: 0 },
+    { x1: 14, y1: 0, x2: 16.5, y2: 4 }
+];
+</script>
+    <script>// Canvas roundRect polyfill for older browsers
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        this.beginPath();
+        this.moveTo(x + r, y);
+        this.arcTo(x + w, y, x + w, y + h, r);
+        this.arcTo(x + w, y + h, x, y + h, r);
+        this.arcTo(x, y + h, x, y, r);
+        this.arcTo(x, y, x + w, y, r);
+        this.closePath();
+        return this;
+    };
+}
+
+class IsometricRenderer {
+    constructor(canvas, gridSize) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d', { alpha: false }); // Optimize for no transparency on base
+        this.gridSize = gridSize;
+        this.offsetX = canvas.width / 2;
+        this.offsetY = canvas.height / 2;
+    }
+
+    resize(width, height, offsetX, offsetY) {
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
+    }
+
+    gridToScreen(gx, gy, gz = 0) {
+        const sx = (gx - gy) * this.gridSize;
+        const sy = (gx + gy) * (this.gridSize / 2) - (gz * this.gridSize);
+        return { x: this.offsetX + sx, y: this.offsetY + sy };
+    }
+
+    clear() {
+        this.ctx.fillStyle = '#0f172a'; // Dark slate
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    drawGround() {
+        // Grid pattern
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        for (let i = -30; i <= 30; i++) {
+            const p1 = this.gridToScreen(i, -30);
+            const p2 = this.gridToScreen(i, 30);
+            this.ctx.moveTo(p1.x, p1.y);
+            this.ctx.lineTo(p2.x, p2.y);
+            
+            const p3 = this.gridToScreen(-30, i);
+            const p4 = this.gridToScreen(30, i);
+            this.ctx.moveTo(p3.x, p3.y);
+            this.ctx.lineTo(p4.x, p4.y);
+        }
+        this.ctx.stroke();
+    }
+
+    drawRoads(roads) {
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        roads.forEach(road => {
+            const p1 = this.gridToScreen(road.x, road.y);
+            const p2 = this.gridToScreen(road.x + road.w, road.y);
+            const p3 = this.gridToScreen(road.x + road.w, road.y + road.h);
+            const p4 = this.gridToScreen(road.x, road.y + road.h);
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(p1.x, p1.y);
+            this.ctx.lineTo(p2.x, p2.y);
+            this.ctx.lineTo(p3.x, p3.y);
+            this.ctx.lineTo(p4.x, p4.y);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            this.ctx.stroke();
+        });
+    }
+
+    drawPowerLines(lines, showPower, time) {
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.lineWidth = 2;
+        
+        lines.forEach(line => {
+            const p1 = this.gridToScreen(line.x1, line.y1);
+            const p2 = this.gridToScreen(line.x2, line.y2);
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(p1.x, p1.y);
+            this.ctx.lineTo(p2.x, p2.y);
+            this.ctx.stroke();
+            
+            if (showPower) {
+                const dashOffset = -time * 50;
+                this.ctx.save();
+                this.ctx.strokeStyle = '#fff';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 10]);
+                this.ctx.lineDashOffset = dashOffset;
+                this.ctx.beginPath();
+                this.ctx.moveTo(p1.x, p1.y);
+                this.ctx.lineTo(p2.x, p2.y);
+                this.ctx.stroke();
+                this.ctx.restore();
+            }
+        });
+    }
+
+    drawBuilding(b, isHovered, status) {
+        if (b.shape === 'box') {
+            this.drawBoxBuilding(b, isHovered, status);
+        } else if (b.shape === 'ring') {
+            this.drawRing(b, isHovered, status);
+        } else if (b.shape === 'circle') {
+            this.drawCircle(b, isHovered, status);
+        } else if (b.shape === 'dome') {
+            this.drawDome(b, isHovered, status);
+        }
+    }
+
+    drawBoxBuilding(b, isHovered, status) {
+        const h = b.h_z || 1;
+        const p1 = this.gridToScreen(b.x, b.y, b.z);
+        const p2 = this.gridToScreen(b.x + b.w, b.y, b.z);
+        const p3 = this.gridToScreen(b.x + b.w, b.y + b.h, b.z);
+        const p4 = this.gridToScreen(b.x, b.y + b.h, b.z);
+        
+        const top1 = this.gridToScreen(b.x, b.y, b.z + h);
+        const top2 = this.gridToScreen(b.x + b.w, b.y, b.z + h);
+        const top3 = this.gridToScreen(b.x + b.w, b.y + b.h, b.z + h);
+        const top4 = this.gridToScreen(b.x, b.y + b.h, b.z + h);
+
+        const fillTop = isHovered ? '#ffffff' : '#e2e8f0';
+        const fillLeft = isHovered ? '#cbd5e1' : '#94a3b8';
+        const fillRight = isHovered ? '#94a3b8' : '#64748b';
+        const strokeColor = '#334155';
+
+        // Right face
+        this.ctx.fillStyle = fillRight;
+        this.ctx.beginPath();
+        this.ctx.moveTo(p2.x, p2.y);
+        this.ctx.lineTo(p3.x, p3.y);
+        this.ctx.lineTo(top3.x, top3.y);
+        this.ctx.lineTo(top2.x, top2.y);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Left face
+        this.ctx.fillStyle = fillLeft;
+        this.ctx.beginPath();
+        this.ctx.moveTo(p3.x, p3.y);
+        this.ctx.lineTo(p4.x, p4.y);
+        this.ctx.lineTo(top4.x, top4.y);
+        this.ctx.lineTo(top3.x, top3.y);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Top face
+        this.ctx.fillStyle = fillTop;
+        this.ctx.beginPath();
+        this.ctx.moveTo(top1.x, top1.y);
+        this.ctx.lineTo(top2.x, top2.y);
+        this.ctx.lineTo(top3.x, top3.y);
+        this.ctx.lineTo(top4.x, top4.y);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+    }
+
+    drawRing(b, isHovered, status) {
+        const center = this.gridToScreen(b.cx, b.cy, b.z);
+        const topCenter = this.gridToScreen(b.cx, b.cy, b.z + b.h_z);
+        const rx = b.radius * this.gridSize;
+        const ry = b.radius * (this.gridSize / 2);
+        
+        const in_rx = (b.radius - 1) * this.gridSize;
+        const in_ry = (b.radius - 1) * (this.gridSize / 2);
+
+        this.ctx.strokeStyle = '#fff';
+        this.ctx.lineWidth = 1;
+        
+        // Base outer
+        this.ctx.beginPath();
+        this.ctx.ellipse(center.x, center.y, rx, ry, 0, 0, 2 * Math.PI);
+        this.ctx.stroke();
+        
+        // Base inner
+        this.ctx.beginPath();
+        this.ctx.ellipse(center.x, center.y, in_rx, in_ry, 0, 0, 2 * Math.PI);
+        this.ctx.stroke();
+
+        // Top outer
+        this.ctx.fillStyle = isHovered ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.1)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(topCenter.x, topCenter.y, rx, ry, 0, 0, 2 * Math.PI);
+        this.ctx.stroke();
+
+        // Top inner
+        this.ctx.beginPath();
+        this.ctx.ellipse(topCenter.x, topCenter.y, in_rx, in_ry, 0, 0, 2 * Math.PI);
+        this.ctx.stroke();
+
+        // Draw panels
+        for(let i=0; i<32; i++) {
+            const angle = (i/32) * Math.PI * 2;
+            const x = topCenter.x + Math.cos(angle) * rx;
+            const y = topCenter.y + Math.sin(angle) * ry;
+            const in_x = topCenter.x + Math.cos(angle) * in_rx;
+            const in_y = topCenter.y + Math.sin(angle) * in_ry;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, y);
+            this.ctx.lineTo(in_x, in_y);
+            this.ctx.stroke();
+        }
+    }
+
+    drawCircle(b, isHovered, status) {
+        const center = this.gridToScreen(b.cx, b.cy, b.z);
+        const rx = b.radius * this.gridSize;
+        const ry = b.radius * (this.gridSize / 2);
+        
+        this.ctx.fillStyle = isHovered ? '#94a3b8' : '#475569';
+        this.ctx.strokeStyle = '#fff';
+        this.ctx.beginPath();
+        this.ctx.ellipse(center.x, center.y, rx, ry, 0, 0, 2 * Math.PI);
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        // Inner circle
+        this.ctx.beginPath();
+        this.ctx.ellipse(center.x, center.y, rx*0.5, ry*0.5, 0, 0, 2 * Math.PI);
+        this.ctx.stroke();
+    }
+
+    drawDome(b, isHovered, status) {
+        const center = this.gridToScreen(b.cx, b.cy, b.z);
+        const rx = b.radius * this.gridSize;
+        const ry = b.radius * (this.gridSize / 2);
+        
+        // Base
+        this.ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(center.x, center.y, rx, ry, 0, 0, 2 * Math.PI);
+        this.ctx.stroke();
+        
+        // Wireframe dome
+        this.ctx.strokeStyle = isHovered ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.2)';
+        this.ctx.lineWidth = 1;
+        
+        const h_px = b.h_z * this.gridSize;
+        
+        // Arcs
+        for(let i=0; i<8; i++) {
+            const angle = (i/8) * Math.PI;
+            this.ctx.beginPath();
+            for(let t=0; t<=Math.PI; t+=0.1) {
+                const px = center.x + Math.cos(angle) * rx * Math.cos(t);
+                const py = center.y + Math.sin(angle) * ry * Math.cos(t) - Math.sin(t) * h_px;
+                if(t===0) this.ctx.moveTo(px, py);
+                else this.ctx.lineTo(px, py);
+            }
+            this.ctx.stroke();
+        }
+        
+        // Horizontal rings
+        for(let j=1; j<4; j++) {
+            const h_factor = Math.sin(j/4 * Math.PI/2);
+            const r_factor = Math.cos(j/4 * Math.PI/2);
+            const r_x = rx * r_factor;
+            const r_y = ry * r_factor;
+            const c_y = center.y - h_factor * h_px;
+            
+            this.ctx.beginPath();
+            this.ctx.ellipse(center.x, c_y, r_x, r_y, 0, 0, 2 * Math.PI);
+            this.ctx.stroke();
+        }
+    }
+
+    drawPowerLabel(b, powerText) {
+        let top;
+        if (b.shape === 'box') {
+            top = this.gridToScreen(b.x + b.w/2, b.y + b.h/2, b.z + (b.h_z || 1));
+        } else {
+            top = this.gridToScreen(b.cx, b.cy, b.z + (b.h_z || 1));
+            if (b.shape === 'dome') top.y -= b.h_z * this.gridSize * 0.5;
+        }
+
+        const px = top.x;
+        const py = top.y - 15;
+
+        this.ctx.font = 'bold 10px "JetBrains Mono", monospace';
+        const txtWidth = this.ctx.measureText(powerText).width;
+        const padX = 6;
+        const padY = 4;
+        
+        this.ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        this.ctx.strokeStyle = '#64748b';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.roundRect(px - txtWidth/2 - padX, py - 10 - padY, txtWidth + padX*2, 10 + padY*2, 4);
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText(powerText, px, py - 5);
+    }
+
+    drawSnow(snowflakes) {
+        this.ctx.fillStyle = '#ffffff';
+        snowflakes.forEach(flake => {
+            this.ctx.globalAlpha = flake.a;
+            this.ctx.beginPath();
+            this.ctx.arc(flake.x, flake.y, flake.r, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+        this.ctx.globalAlpha = 1.0;
+    }
+
+    hitTest(x, y, buildings) {
+        let hit = null;
+        let maxZ = -Infinity;
+        
+        for (const b of buildings) {
+            let pts = [];
+            if (b.shape === 'box') {
+                const h = b.h_z || 1;
+                // Just use the top face for hit testing roughly
+                pts = [
+                    this.gridToScreen(b.x, b.y, b.z + h),
+                    this.gridToScreen(b.x + b.w, b.y, b.z + h),
+                    this.gridToScreen(b.x + b.w, b.y + b.h, b.z + h),
+                    this.gridToScreen(b.x, b.y + b.h, b.z + h)
+                ];
+            } else if (b.shape === 'ring' || b.shape === 'circle' || b.shape === 'dome') {
+                const c = this.gridToScreen(b.cx, b.cy, b.z);
+                const rx = b.radius * this.gridSize;
+                const ry = b.radius * (this.gridSize / 2);
+                const dx = (x - c.x) / rx;
+                const dy = (y - c.y) / ry;
+                if (dx*dx + dy*dy <= 1) {
+                    if (b.z > maxZ) { maxZ = b.z; hit = b; }
+                }
+                continue;
+            }
+
+            if (pts.length > 0 && this.pointInPolygon(x, y, pts)) {
+                if (b.z > maxZ) {
+                    maxZ = b.z;
+                    hit = b;
+                }
+            }
+        }
+        return hit;
+    }
+
+    pointInPolygon(x, y, vs) {
+        let inside = false;
+        for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+            const xi = vs[i].x, yi = vs[i].y;
+            const xj = vs[j].x, yj = vs[j].y;
+            const intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+}
+</script>
+    <script>class PowerSimulation {
+    constructor(buildings) {
+        this.buildings = buildings;
+        this.time = 0; // 0 to 24
+        this.baseTemp = -30;
+        
+        this.state = {
+            totalLoad: 0,
+            solarGen: 0,
+            windGen: 0,
+            backupGen: 0,
+            outsideTemp: -30,
+            domeTemp: 7,
+            buildings: {}
+        };
+        
+        this.buildings.forEach(b => {
+            this.state.buildings[b.id] = {
+                currentPower: 0,
+                loadPercent: 0,
+                temperature: b.id === 'vcv_dome' ? 7 : (b.shape === 'box' ? 20 : -30),
+                status: 'normal',
+                history: Array(60).fill(0)
+            };
+        });
+    }
+
+    tick(dt) {
+        this.time += dt * 0.5; 
+        if (this.time >= 24) this.time -= 24;
+
+        if (window.STATION_DATA && window.STATION_DATA.length > 0) {
+            let hourIndex = Math.floor(this.time) % window.STATION_DATA.length;
+            if (hourIndex < 0) hourIndex += window.STATION_DATA.length;
+            const data = window.STATION_DATA[hourIndex];
+            
+            this.state.outsideTemp = data.temperature;
+            this.state.domeTemp = Math.max(5, data.temperature + 40); 
+            this.state.solarGen = data.lp_solar;
+            this.state.windGen = data.lp_wind;
+            this.state.backupGen = data.lp_diesel;
+            
+            let totalLoad = data.load_kw;
+            
+            const consumers = this.buildings.filter(b => b.basePower > 0);
+            const totalBase = consumers.reduce((sum, b) => sum + b.basePower, 0);
+            
+            consumers.forEach(b => {
+                const bState = this.state.buildings[b.id];
+                const ratio = b.basePower / totalBase;
+                const power = totalLoad * ratio * (0.9 + Math.random()*0.2);
+                bState.currentPower = power;
+                bState.loadPercent = (power / (b.basePower * 1.5)) * 100;
+                
+                if (b.id === 'vcv_dome') bState.temperature = this.state.domeTemp;
+                else bState.temperature = 20 + Math.random() * 1.5;
+                
+                bState.history.push(Math.abs(bState.currentPower));
+                bState.history.shift();
+                
+                if (bState.loadPercent > 90) bState.status = 'critical';
+                else if (bState.loadPercent > 75) bState.status = 'warning';
+                else bState.status = 'normal';
+            });
+            
+            const producers = this.buildings.filter(b => b.basePower <= 0);
+            producers.forEach(b => {
+                const bState = this.state.buildings[b.id];
+                bState.currentPower = -(this.state.solarGen + this.state.windGen);
+                bState.loadPercent = Math.min(100, (Math.abs(bState.currentPower) / 1500) * 100);
+                bState.history.push(Math.abs(bState.currentPower));
+                bState.history.shift();
+                bState.status = 'normal';
+            });
+            
+            this.state.totalLoad = totalLoad;
+            return;
+        }
+    
+
+        // Environment
+        const timeRad = (this.time / 24) * Math.PI * 2;
+        this.state.outsideTemp = this.baseTemp + Math.sin(timeRad - Math.PI/2) * 10;
+        
+        // VCV Dome specific temp (4 to 11 degrees)
+        this.state.domeTemp = 7.5 + Math.sin(timeRad - Math.PI/2) * 3.5;
+
+        // Generation
+        // Solar (peak at noon)
+        const solarFactor = Math.max(0, Math.sin(timeRad - Math.PI/2));
+        this.state.solarGen = 200 + solarFactor * 800;
+        
+        // Wind (random gusts + baseline)
+        const windBase = 200 + Math.sin(timeRad * 3) * 100;
+        const windGust = Math.random() > 0.8 ? Math.random() * 200 : 0;
+        this.state.windGen = windBase + windGust;
+
+        let totalLoad = 0;
+
+        // Building loads
+        this.buildings.forEach(b => {
+            const bState = this.state.buildings[b.id];
+            
+            if (b.basePower > 0) { // Consumer
+                // Time of day usage pattern
+                let timeMult = 1.0;
+                if (b.category === 'living') {
+                    // Morning and evening peaks
+                    const morning = Math.max(0, Math.sin((this.time - 6) * Math.PI / 6));
+                    const evening = Math.max(0, Math.sin((this.time - 18) * Math.PI / 6));
+                    timeMult = 0.5 + (morning + evening) * 0.5;
+                } else if (b.category === 'science' || b.category === 'technical') {
+                    // Daytime peak
+                    timeMult = 0.8 + Math.max(0, Math.sin((this.time - 8) * Math.PI / 12)) * 0.4;
+                }
+                
+                // Heating load (colder = more power)
+                let heatMult = 1.0;
+                if (b.id === 'vcv_dome') {
+                    const tempDiff = 11 - this.state.outsideTemp;
+                    heatMult = 1.0 + (tempDiff / 50);
+                } else if (b.shape === 'box') {
+                    // Inside the dome, heating load is lower!
+                    // Assuming most boxes are in the dome
+                    const tempDiff = 20 - this.state.domeTemp;
+                    heatMult = 1.0 + (tempDiff / 40);
+                }
+
+                // Random fluctuation
+                const noise = 0.95 + Math.random() * 0.1;
+                
+                const power = b.basePower * timeMult * heatMult * noise;
+                bState.currentPower = power;
+                bState.loadPercent = (power / (b.basePower * 1.5)) * 100;
+                totalLoad += power;
+                
+                // Temperatures
+                if (b.id === 'vcv_dome') {
+                    bState.temperature = this.state.domeTemp;
+                } else if (b.shape === 'box') {
+                    bState.temperature = 20 + Math.random() * 1.5;
+                }
+
+            } else { // Producer (Ring)
+                bState.currentPower = -(this.state.solarGen + this.state.windGen);
+                bState.loadPercent = Math.min(100, (Math.abs(bState.currentPower) / 1500) * 100);
+            }
+
+            // Update history
+            bState.history.push(Math.abs(bState.currentPower));
+            bState.history.shift();
+
+            // Status
+            if (bState.loadPercent > 90) bState.status = 'critical';
+            else if (bState.loadPercent > 75) bState.status = 'warning';
+            else bState.status = 'normal';
+        });
+
+        this.state.totalLoad = totalLoad;
+
+        // Backup generator fills the gap if needed
+        const totalGen = this.state.solarGen + this.state.windGen;
+        if (totalLoad > totalGen) {
+            this.state.backupGen = totalLoad - totalGen;
+        } else {
+            this.state.backupGen = 0;
+        }
+    }
+
+    getState(id) {
+        return id ? this.state.buildings[id] : this.state;
+    }
+}
+</script>
+    <script>/**
+ * app.js — Main application entry point
+ * Wires together the renderer, simulation, HUD, controls,
+ * pan/zoom interactions, tooltips, and bottom panel.
+ */
+
+(function () {
+    'use strict';
+
+    // ─── INIT ───
+    const canvas = document.getElementById('stationCanvas');
+    const container = document.getElementById('canvasContainer');
+    const renderer = new IsometricRenderer(canvas, 30);
+    const simulation = new PowerSimulation(BUILDINGS);
+
+    function resizeCanvas() {
+        const rect = container.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+            renderer.resize(rect.width, rect.height, rect.width / 2, rect.height / 2);
+        }
+    }
+    window.addEventListener('resize', resizeCanvas);
+    setInterval(resizeCanvas, 500); // Failsafe for iframes
+    resizeCanvas();
+
+    // Center view
+    renderer.offsetX = canvas.width / 2;
+    renderer.offsetY = canvas.height / 2 + 50;
+    
+    // ─── PAN & ZOOM ───
+    let isDragging = false;
+    let dragStartX, dragStartY;
+    let lastOffsetX, lastOffsetY;
+
+    container.addEventListener('mousedown', e => {
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        lastOffsetX = renderer.offsetX;
+        lastOffsetY = renderer.offsetY;
+        container.style.cursor = 'grabbing';
+    });
+
+    window.addEventListener('mousemove', e => {
+        if (isDragging) {
+            renderer.offsetX = lastOffsetX + (e.clientX - dragStartX);
+            renderer.offsetY = lastOffsetY + (e.clientY - dragStartY);
+        }
+
+        // Hit test for hover
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        
+        // Convert screen to isometric grid conceptually for hit test
+        // Let hitTest handle screen coordinates by giving it mx, my
+        const hit = renderer.hitTest(mx, my, BUILDINGS);
+        renderer.hoveredBuilding = hit;
+        container.style.cursor = isDragging ? 'grabbing' : (hit ? 'pointer' : 'grab');
+
+        // Tooltip
+        updateTooltip(hit, e.clientX, e.clientY);
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+        container.style.cursor = 'grab';
+    });
+
+    // Zoom with scroll
+    container.addEventListener('wheel', e => {
+        e.preventDefault();
+        const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
+        const newGridSize = Math.max(10, Math.min(60, renderer.gridSize * zoomDelta));
+
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        // Keep mouse at same world position
+        const relX = mx - renderer.offsetX;
+        const relY = my - renderer.offsetY;
+        
+        const scale = newGridSize / renderer.gridSize;
+        
+        renderer.offsetX = mx - (relX * scale);
+        renderer.offsetY = my - (relY * scale);
+        renderer.gridSize = newGridSize;
+    }, { passive: false });
+
+    // ─── CONTROLS ───
+    document.getElementById('zoomIn').addEventListener('click', () => {
+        renderer.gridSize = Math.min(60, renderer.gridSize * 1.2);
+    });
+    document.getElementById('zoomOut').addEventListener('click', () => {
+        renderer.gridSize = Math.max(10, renderer.gridSize / 1.2);
+    });
+    document.getElementById('resetView').addEventListener('click', () => {
+        resizeCanvas();
+        renderer.offsetX = canvas.width / 2;
+        renderer.offsetY = canvas.height / 2 + 50;
+        renderer.gridSize = 30;
+    });
+
+    let showLabels = true;
+    let showPower = true;
+    let showSnow = true;
+    const snowflakes = Array.from({length: 100}, () => ({
+        x: Math.random() * 2000 - 1000,
+        y: Math.random() * 1000 - 500,
+        z: Math.random() * 10,
+        r: Math.random() * 1.5 + 0.5,
+        speed: Math.random() * 0.5 + 0.5,
+        a: Math.random() * 0.5 + 0.1
+    }));
+
+    document.getElementById('toggleLabels').classList.add('active');
+    document.getElementById('togglePower').classList.add('active');
+    document.getElementById('toggleSnow').classList.add('active');
+
+    document.getElementById('toggleLabels').addEventListener('click', (e) => {
+        showLabels = !showLabels;
+        e.target.classList.toggle('active');
+    });
+    document.getElementById('togglePower').addEventListener('click', (e) => {
+        showPower = !showPower;
+        e.target.classList.toggle('active');
+    });
+    document.getElementById('toggleSnow').addEventListener('click', (e) => {
+        showSnow = !showSnow;
+        e.target.classList.toggle('active');
+    });
+
+    // ─── BOTTOM PANEL ───
+    const bottomPanel = document.getElementById('bottomPanel');
+    const panelToggle = document.getElementById('panelToggle');
+
+    panelToggle.addEventListener('click', () => {
+        bottomPanel.classList.toggle('collapsed');
+        panelToggle.querySelector('span').textContent =
+            bottomPanel.classList.contains('collapsed')
+                ? '▲ Power Grid Overview'
+                : '▼ Power Grid Overview';
+    });
+
+    // Build power cards
+    function buildPowerCards() {
+        const grid = document.getElementById('powerGrid');
+        grid.innerHTML = '';
+        BUILDINGS.forEach(b => {
+            const card = document.createElement('div');
+            card.className = 'power-card';
+            card.id = `card-${b.id}`;
+            card.innerHTML = `
+                <div class="card-name">${b.icon} ${b.name}</div>
+                <div class="card-power">-- kW</div>
+                <div class="card-bar-bg"><div class="card-bar" style="width:0%"></div></div>
+                <div class="card-detail">Load: --% | ${b.basePower < 0 ? 'Generator' : 'Consumer'}</div>
+            `;
+            card.addEventListener('click', () => {
+                const pos = renderer.gridToScreen(b.cx !== undefined ? b.cx : b.x + b.w/2, b.cy !== undefined ? b.cy : b.y + b.h/2);
+                renderer.offsetX += canvas.width / 2 - pos.x;
+                renderer.offsetY += canvas.height / 2 - pos.y;
+            });
+            grid.appendChild(card);
+        });
+    }
+    buildPowerCards();
+
+    function updatePowerCards() {
+        BUILDINGS.forEach(b => {
+            const state = simulation.getState(b.id);
+            const card = document.getElementById(`card-${b.id}`);
+            if (!card || !state) return;
+
+            const powerEl = card.querySelector('.card-power');
+            const barEl = card.querySelector('.card-bar');
+            const detailEl = card.querySelector('.card-detail');
+
+            const isGen = b.basePower < 0;
+            powerEl.textContent = `${isGen ? '▲' : ''} ${Math.abs(state.currentPower).toFixed(1)} kW`;
+            barEl.style.width = `${Math.min(100, state.loadPercent)}%`;
+            detailEl.textContent = `Load: ${state.loadPercent.toFixed(0)}% | ${state.temperature.toFixed(1)}°C inside`;
+        });
+    }
+
+    // ─── TOOLTIP ───
+    const tooltip = document.getElementById('tooltip');
+    const tooltipHeader = document.getElementById('tooltipHeader');
+    const tooltipBody = document.getElementById('tooltipBody');
+
+    function updateTooltip(building, mx, my) {
+        if (!building) {
+            tooltip.style.display = 'none';
+            return;
+        }
+
+        const state = simulation.getState(building.id);
+
+        tooltipHeader.innerHTML = `${building.icon} ${building.name}`;
+
+        // Build sparkline SVG from history
+        const history = state.history || [];
+        let sparkline = '';
+        if (history.length > 5) {
+            const maxH = Math.max(...history, 1);
+            const minH = Math.min(...history);
+            const svgW = 200, svgH = 30;
+            const pts = history.map((v, i) => {
+                const x = (i / (history.length - 1)) * svgW;
+                const y = svgH - ((v - minH) / (maxH - minH + 0.01)) * svgH;
+                return `${x},${y}`;
+            }).join(' ');
+            sparkline = `<div style="margin-top:8px">
+                <div style="font-size:9px;color:#666;margin-bottom:2px">POWER HISTORY (60s)</div>
+                <svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
+                    <polyline points="${pts}" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+                    <polyline points="0,${svgH} ${pts} ${svgW},${svgH}" fill="url(#sparkGrad-${building.id})" stroke="none" opacity="0.15"/>
+                    <defs><linearGradient id="sparkGrad-${building.id}" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#fff"/>
+                        <stop offset="100%" stop-color="transparent"/>
+                    </linearGradient></defs>
+                </svg>
+            </div>`;
+        }
+
+        tooltipBody.innerHTML = `
+            <div class="tooltip-row">
+                <span>Category</span>
+                <span class="tooltip-value">${BUILDING_CATEGORIES[building.category].label}</span>
+            </div>
+            <div class="tooltip-row">
+                <span>Power</span>
+                <span class="tooltip-value">${Math.abs(state.currentPower).toFixed(1)} kW</span>
+            </div>
+            <div class="tooltip-row">
+                <span>Load</span>
+                <span class="tooltip-value">${state.loadPercent.toFixed(0)}%</span>
+            </div>
+            <div class="tooltip-row">
+                <span>Inside Temp</span>
+                <span class="tooltip-value">${state.temperature.toFixed(1)}°C</span>
+            </div>
+            <div class="tooltip-row">
+                <span>Status</span>
+                <span class="tooltip-value">${state.status.toUpperCase()}</span>
+            </div>
+            ${sparkline}
+            <div style="margin-top:8px;font-size:10px;color:#666">${building.description}</div>
+        `;
+
+        // Position tooltip
+        const rect = container.getBoundingClientRect();
+        let tx = mx - rect.left + 16;
+        let ty = my - rect.top - 20;
+
+        // Keep on screen
+        if (tx + 260 > rect.width) tx = mx - rect.left - 270;
+        if (ty + 200 > rect.height) ty = rect.height - 210;
+        if (ty < 10) ty = 10;
+
+        tooltip.style.display = 'block';
+        tooltip.style.left = tx + 'px';
+        tooltip.style.top = ty + 'px';
+    }
+
+    // ─── HUD UPDATES ───
+    function updateHUD() {
+        const s = simulation.getState();
+        document.getElementById('totalLoad').textContent = `${s.totalLoad.toFixed(0)} kW`;
+        document.getElementById('solarPower').textContent = `${s.solarGen.toFixed(0)} kW`;
+        document.getElementById('windPower').textContent = `${s.windGen.toFixed(0)} kW`;
+        document.getElementById('dieselPower').textContent = `${s.backupGen.toFixed(0)} kW`;
+        document.getElementById('outsideTemp').textContent = `${s.outsideTemp.toFixed(1)}°C`;
+        document.getElementById('domeTemp').textContent = `${s.domeTemp.toFixed(1)}°C`;
+
+        // Time display
+        const hours = Math.floor(simulation.time);
+        const minutes = Math.floor((simulation.time % 1) * 60);
+        const seconds = Math.floor(((simulation.time * 60) % 1) * 60);
+        document.getElementById('timeDisplay').textContent =
+            `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    // ─── RENDER LOOP ───
+    let lastTime = null;
+    let simTime = 0;
+
+    function frame(timestamp) {
+        if (lastTime === null) lastTime = timestamp;
+        let dt = (timestamp - lastTime) / 1000;
+        if (dt < 0 || dt > 1) dt = 0.016; // Safety clamp for iframe anomalies
+        lastTime = timestamp;
+        simTime += dt;
+
+        // Simulation tick
+        simulation.tick(dt);
+
+        // Render
+        renderer.clear();
+        renderer.drawGround();
+        renderer.drawRoads(ROADS);
+        renderer.drawPowerLines(POWER_LINES, showPower, simTime);
+
+        // Sort buildings by z to draw base then living then dome
+        const sorted = [...BUILDINGS].sort((a, b) => a.z - b.z);
+        sorted.forEach(b => {
+            const state = simulation.getState(b.id);
+            const isHovered = renderer.hoveredBuilding === b;
+            renderer.drawBuilding(b, isHovered, state.status);
+            if (showLabels) {
+                renderer.drawPowerLabel(b, `${Math.abs(state.currentPower).toFixed(0)} kW`);
+            }
+        });
+
+        if (showSnow) {
+            snowflakes.forEach(f => {
+                f.x -= f.speed * dt * 50;
+                f.y += f.speed * dt * 20;
+                const pos = renderer.gridToScreen(0,0,0); // use just screen offset conceptually
+                let sx = pos.x + f.x;
+                let sy = pos.y + f.y;
+                if(sx < 0) f.x += canvas.width;
+                if(sy > canvas.height) f.y -= canvas.height;
+            });
+            // Renderer doesn't know about screen space snowflakes directly, let's just pass the screen coords to it
+            const snowToDraw = snowflakes.map(f => {
+                const pos = renderer.gridToScreen(0,0,0);
+                return {
+                    x: (pos.x + f.x) % canvas.width,
+                    y: (pos.y + f.y) % canvas.height,
+                    r: f.r,
+                    a: f.a
+                };
+            });
+            // Fix modulo negative
+            snowToDraw.forEach(s => {
+                if(s.x < 0) s.x += canvas.width;
+                if(s.y < 0) s.y += canvas.height;
+            });
+            renderer.drawSnow(snowToDraw);
+        }
+
+        // Update UI periodically
+        if (Math.floor(timestamp / 200) !== Math.floor((timestamp - dt * 1000) / 200)) {
+            updateHUD();
+            updatePowerCards();
+        }
+
+        requestAnimationFrame(frame);
+    }
+
+    // ─── START ───
+    requestAnimationFrame(frame);
+    updateHUD();
+
+})();
+</script>
+</body>
+</html>

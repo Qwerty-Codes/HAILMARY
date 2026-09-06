@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Microgrid Digital Twin</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Plotly -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- PapaParse -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- WEATHER BACKGROUNDS -->
+    <div id="weather-backgrounds">
+        <div id="bg-day" class="weather-bg">
+            <div class="sun"></div>
+        </div>
+        <div id="bg-night" class="weather-bg">
+            <div class="aurora"></div>
+            <div class="stars"></div>
+        </div>
+        <div id="bg-storm" class="weather-bg">
+            <canvas id="snow-canvas"></canvas>
+        </div>
+    </div>
+    
+    <!-- FROSTED GLASS OVERLAY -->
+    <div class="glass-overlay"></div>
+
+    <div class="dashboard-container">
+        
+        <!-- HEADER ROW -->
+        <header class="aw-header">
+            <div class="header-left">
+                <span class="eyebrow">LIVE POLAR STATION</span>
+                <h1 class="project-title">HAILMARY</h1>
+            </div>
+            <div class="header-right" style="display: flex; align-items: center; gap: 16px;">
+                <div class="live-badge"><span class="pulse-dot"></span> LIVE SIMULATION</div>
+                <button id="btn-pause" class="btn-outline">Pause</button>
+                
+                <button class="theme-switch" id="theme-toggle" aria-label="Toggle Theme">
+                    <span class="icon sun-icon">☀️</span>
+                    <span class="icon moon-icon">🌙</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- ALERT TICKER -->
+        <div class="ticker-wrap">
+            <div class="ticker-badge safe" id="ticker-badge">INFO</div>
+            <span id="ticker-msg">System status optimal — AI maximizing renewable penetration.</span>
+        </div>
+
+        <!-- TABS -->
+        <nav class="aw-tabs">
+            <a href="#digital-twin" class="tab-link active">Digital Twin</a>
+            <a href="#source-breakdown" class="tab-link">Source Breakdown</a>
+            <a href="#ai-comparison" class="tab-link">AI vs Manual</a>
+        </nav>
+
+        <!-- ========================================== -->
+        <!-- SECTION 1: DIGITAL TWIN (Reference Layout) -->
+        <!-- ========================================== -->
+        <section id="digital-twin" class="dashboard-section active-section">
+            <!-- Row 1: Five Cards (Added Risk) -->
+            <div class="row grid-5">
+                <div class="card stat-card">
+                    <span class="label">Temperature</span>
+                    <div class="value"><span id="val-temp">--</span> °C</div>
+                </div>
+                <div class="card stat-card">
+                    <span class="label">Wind</span>
+                    <div class="value"><span id="val-wind">--</span> m/s</div>
+                </div>
+                <div class="card stat-card">
+                    <span class="label">Solar</span>
+                    <div class="value"><span id="val-solar">--</span> W/m²</div>
+                </div>
+                <div class="card stat-card">
+                    <span class="label">Battery SOC</span>
+                    <div class="value"><span id="val-soc">--</span>%</div>
+                </div>
+                <div class="card stat-card" style="border-left: 2px solid var(--color-alert);">
+                    <span class="label">System Risk Score</span>
+                    <div class="value" style="color: var(--color-alert);"><span id="val-risk">--</span>%</div>
+                </div>
+            </div>
+
+            <!-- Row 2: 60/40 Split -->
+            <div class="row split-60-40">
+                <!-- Left Card: Chart -->
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <div>
+                            <h2>24-hour energy balance</h2>
+                            <span class="subtitle">Load vs renewable generation</span>
+                        </div>
+                        <div class="hour-indicator">Hour <span id="val-hour">--</span></div>
+                    </div>
+                    <div class="chart-legend">
+                        <span class="legend-item"><span class="dot dot-load"></span> Load</span>
+                        <span class="legend-item"><span class="dot dot-ren"></span> Renewables</span>
+                    </div>
+                    <div id="balance-chart" style="height: 220px; width: 100%; margin-top: 16px;"></div>
+                </div>
+
+                <!-- Right Card: List -->
+                <div class="card list-card">
+                    <h2>Power sources</h2>
+                    <div class="list-container">
+                        <div class="list-row"><span class="list-label">Solar generation</span><span class="list-val"><span id="list-solar">--</span> kW</span></div>
+                        <div class="list-row"><span class="list-label">Wind generation</span><span class="list-val"><span id="list-wind">--</span> kW</span></div>
+                        <div class="list-row"><span class="list-label" style="color: var(--color-battery);">Critical Load (P0-P2)</span><span class="list-val"><span id="list-load-crit">--</span> kW</span></div>
+                        <div class="list-row"><span class="list-label">Non-Critical Load</span><span class="list-val"><span id="list-load-non">--</span> kW</span></div>
+                        <div class="list-row" id="shedding-alert" style="display: none; background: rgba(255, 60, 60, 0.15); color: var(--color-alert); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; margin-top: 4px; margin-bottom: 8px; text-align: center; font-weight: 700;">⚠ LOAD SHEDDING ACTIVE</div>
+                        <div class="list-row"><span class="list-label">Diesel fuel</span><span class="list-val"><span id="list-diesel">--</span>%</span></div>
+                        <div class="list-row"><span class="list-label">Battery temperature</span><span class="list-val"><span id="list-batt-temp">--</span> °C</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 3: Decision -->
+            <div class="row">
+                <div class="card decision-card">
+                    <h2>Simulation decision</h2>
+                    <p id="decision-text">Initializing digital twin simulation...</p>
+                </div>
+            </div>
+
+            <!-- Row 4: Action Buttons (Replaced with God Mode Toggles) -->
+            <div class="row">
+                <div class="card override-card" style="width: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                        <div>
+                            <h2>Live Environment Overrides</h2>
+                            <span class="subtitle">Manually inject extreme conditions to test real-time grid resilience.</span>
+                        </div>
+                        <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                            <label class="toggle-control">
+                                <input type="checkbox" id="tgl-day">
+                                <span class="control-indicator"></span>
+                                <span class="control-label" style="color: var(--color-ren);">Peak Daytime</span>
+                            </label>
+                            <label class="toggle-control">
+                                <input type="checkbox" id="tgl-night">
+                                <span class="control-indicator"></span>
+                                <span class="control-label">Polar Night</span>
+                            </label>
+                            <label class="toggle-control">
+                                <input type="checkbox" id="tgl-normal">
+                                <span class="control-indicator"></span>
+                                <span class="control-label" style="color: var(--color-wind);">Normal Weather</span>
+                            </label>
+                            <label class="toggle-control">
+                                <input type="checkbox" id="tgl-storm">
+                                <span class="control-indicator"></span>
+                                <span class="control-label">Severe Storm</span>
+                            </label>
+                            <label class="toggle-control">
+                                <input type="checkbox" id="tgl-cold">
+                                <span class="control-indicator"></span>
+                                <span class="control-label">Extreme Cold</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- SECTION 2: SOURCE BREAKDOWN                -->
+        <!-- ========================================== -->
+        <section id="source-breakdown" class="dashboard-section">
+            <!-- Animated Energy Flow Diagram -->
+            <div class="card flow-diagram-card" style="margin-bottom: 24px; padding: var(--sp-5);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h2>Live Energy Flow</h2>
+                    <span class="comp-badge" style="background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">Digital Twin Telemetry</span>
+                </div>
+                
+                <div class="flow-container">
+                    <!-- Generation Nodes -->
+                    <div class="flow-col">
+                        <div id="node-solar" class="flow-node">Solar PV<br><span id="flow-val-solar" class="flow-val">0</span> kW</div>
+                        <div id="node-wind" class="flow-node">Wind Farm<br><span id="flow-val-wind" class="flow-val">0</span> kW</div>
+                        <div id="node-diesel" class="flow-node">Diesel Gen<br><span id="flow-val-diesel" class="flow-val">0</span> kW</div>
+                    </div>
+                    
+                    <!-- Path 1 (Gen to Bus) -->
+                    <div class="flow-path"><div id="wire-gen" class="wire-animated"></div></div>
+                    
+                    <!-- Battery Bus -->
+                    <div class="flow-col" style="align-items: center;">
+                        <div id="node-battery" class="flow-node battery-node">Battery Bus<br><span id="flow-val-batt" class="flow-val">0</span>%</div>
+                    </div>
+                    
+                    <!-- Path 2 (Bus to Load) -->
+                    <div class="flow-path"><div id="wire-load" class="wire-animated"></div></div>
+                    
+                    <!-- Consumption Nodes -->
+                    <div class="flow-col">
+                        <div id="node-crit" class="flow-node crit-node" style="border-color: var(--color-battery);">Critical (P0-P2)<br><span id="flow-val-crit" class="flow-val">0</span> kW</div>
+                        <div id="node-noncrit" class="flow-node">Non-Critical<br><span id="flow-val-non" class="flow-val">0</span> kW</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row grid-4">
+                <!-- Diesel -->
+                <div class="card source-card diesel">
+                    <div class="card-header"><span class="card-title">DIESEL GEN</span></div>
+                    <div class="value"><span id="src-diesel">0.0</span> <span style="font-size: 1rem;">kW</span></div>
+                    <div class="card-details">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 4px;">
+                            <span>CAPACITY: 200 kW</span><span id="src-diesel-pct">0%</span>
+                        </div>
+                        <div style="height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden;">
+                            <div id="src-diesel-bar" style="height: 100%; width: 0%; background: var(--color-diesel); transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Solar -->
+                <div class="card source-card solar">
+                    <div class="card-header"><span class="card-title">SOLAR PV</span></div>
+                    <div class="value"><span id="src-solar">0.0</span> <span style="font-size: 1rem;">kW</span></div>
+                    <div class="card-details">
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">ACTIVE YIELD</span>
+                    </div>
+                </div>
+                <!-- Wind -->
+                <div class="card source-card wind">
+                    <div class="card-header"><span class="card-title">WIND TURBINE</span></div>
+                    <div class="value"><span id="src-wind">0.0</span> <span style="font-size: 1rem;">kW</span></div>
+                    <div class="card-details" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">
+                        STATUS: <span id="src-wind-status" style="color: var(--text-main);">--</span>
+                    </div>
+                </div>
+                <!-- Battery -->
+                <div class="card source-card battery">
+                    <div class="card-header"><span class="card-title">BATTERY ESS</span></div>
+                    <div class="value"><span id="src-batt">0.0</span> <span style="font-size: 1rem;">kW</span></div>
+                    <div class="card-details" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>STORED:</span><span id="src-batt-kwh" style="color: var(--text-main);">-- / 500 kWh</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>RATE:</span><span id="src-batt-dir" style="color: var(--text-main);">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="mix-chart" style="height: 300px; width: 100%; margin-top: 24px;"></div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- SECTION 3: AI VS MANUAL                    -->
+        <!-- ========================================== -->
+        <section id="ai-comparison" class="dashboard-section">
+            <div class="card comparison-card" style="padding: var(--sp-5);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h2>Cumulative Savings vs Manual Ops</h2>
+                    <span class="comp-badge" style="background: var(--color-ren); color: #000; padding: 4px 12px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 700;">AI OPTIMIZATION IMPACT</span>
+                </div>
+                <div class="row grid-4">
+                    <div>
+                        <span class="label">Fuel Prevented</span>
+                        <div class="value" style="color: var(--text-main);"><span id="comp-fuel">0</span> <span style="font-size: 1rem;">L</span></div>
+                    </div>
+                    <div>
+                        <span class="label">Cost Saved</span>
+                        <div class="value" style="color: var(--color-ren);">₹<span id="comp-cost">0</span></div>
+                    </div>
+                    <div>
+                        <span class="label">CO₂ Averted</span>
+                        <div class="value" style="color: var(--text-muted);"><span id="comp-co2">0</span> <span style="font-size: 1rem;">kg</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+    
+    <script src="app.js?v=2"></script>
+</body>
+</html>

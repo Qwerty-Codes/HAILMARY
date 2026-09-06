@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polar Station Energy Management System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Top HUD Bar -->
+    <div class="hud-bar">
+        <div class="hud-left">
+            <div class="station-badge">
+                <div class="badge-icon">❄️</div>
+                <div class="badge-text">
+                    <span class="station-name">Polar Research Station</span>
+                    <span class="station-subtitle">Antarctica • 70°46'S 11°44'E</span>
+                </div>
+            </div>
+        </div>
+        <div class="hud-center">
+            <div class="hud-stat">
+                <span class="stat-label">TOTAL LOAD</span>
+                <span class="stat-value" id="totalLoad">0 kW</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-stat">
+                <span class="stat-label">SOLAR</span>
+                <span class="stat-value" id="solarPower">0 kW</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-stat">
+                <span class="stat-label">WIND</span>
+                <span class="stat-value" id="windPower">0 kW</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-stat">
+                <span class="stat-label">BACKUP</span>
+                <span class="stat-value" id="dieselPower">0 kW</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-stat">
+                <span class="stat-label">OUTSIDE</span>
+                <span class="stat-value" id="outsideTemp">-35°C</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-stat">
+                <span class="stat-label">DOME</span>
+                <span class="stat-value" id="domeTemp">7°C</span>
+            </div>
+        </div>
+        <div class="hud-right">
+            <div class="time-display" id="timeDisplay">00:00:00</div>
+            <div class="date-display" id="dateDisplay">2026-09-05</div>
+        </div>
+    </div>
+
+    <!-- Main Canvas Area -->
+    <div class="canvas-container" id="canvasContainer">
+        <canvas id="stationCanvas"></canvas>
+        <div class="tooltip" id="tooltip" style="display:none;">
+            <div class="tooltip-header" id="tooltipHeader"></div>
+            <div class="tooltip-body" id="tooltipBody"></div>
+        </div>
+    </div>
+
+    <!-- Bottom Panel -->
+    <div class="bottom-panel" id="bottomPanel">
+        <div class="panel-toggle" id="panelToggle">
+            <span>▲ Power Grid Overview</span>
+        </div>
+        <div class="panel-content" id="panelContent">
+            <div class="power-grid" id="powerGrid"></div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button class="ctrl-btn" id="zoomIn" title="Zoom In">+</button>
+        <button class="ctrl-btn" id="zoomOut" title="Zoom Out">−</button>
+        <button class="ctrl-btn" id="resetView" title="Reset View">⌂</button>
+        <div class="ctrl-separator"></div>
+        <button class="ctrl-btn" id="toggleLabels" title="Toggle Labels">🏷</button>
+        <button class="ctrl-btn" id="togglePower" title="Toggle Power">⚡</button>
+        <button class="ctrl-btn" id="toggleSnow" title="Toggle Snow">❄</button>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-title">Zone Types</div>
+        <div class="legend-item"><span class="legend-color"></span>Science & Research</div>
+        <div class="legend-item"><span class="legend-color"></span>Technical & Operations</div>
+        <div class="legend-item"><span class="legend-color"></span>Living & Wellbeing</div>
+        <div class="legend-item"><span class="legend-color"></span>Energy Infrastructure</div>
+        <div class="legend-item"><span class="legend-color"></span>External Facilities</div>
+    </div>
+
+    <script src="buildings.js"></script>
+    <script src="renderer.js"></script>
+    <script src="simulation.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
