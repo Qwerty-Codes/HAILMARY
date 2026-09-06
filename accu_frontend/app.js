@@ -171,6 +171,47 @@ function setupControls() {
         }
     });
 
+    const timeSlider = document.getElementById('time-slider');
+    const timeLabel = document.getElementById('slider-time-label');
+    if (timeSlider) {
+        timeSlider.addEventListener('input', (e) => {
+            const targetHour = parseInt(e.target.value);
+            if (timeLabel) timeLabel.textContent = targetHour.toString().padStart(2, '0') + ':00';
+            
+            let currentDayStr = globalData[currentIndex].timestamp.split(' ')[0];
+            let targetHourStr = targetHour.toString().padStart(2, '0');
+            
+            let foundIndex = -1;
+            for(let i=0; i<globalData.length; i++) {
+                let ts = globalData[i].timestamp;
+                if (ts.startsWith(currentDayStr) && ts.includes(' ' + targetHourStr + ':')) {
+                    foundIndex = i;
+                    break;
+                }
+            }
+            
+            if (foundIndex === -1) {
+                let minDiff = Infinity;
+                let closestIndex = currentIndex;
+                for(let i=0; i<globalData.length; i++) {
+                    let ts = globalData[i].timestamp;
+                    if (ts.startsWith(currentDayStr)) {
+                        let h = parseInt(ts.split(' ')[1].split(':')[0]);
+                        let diff = Math.abs(h - targetHour);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestIndex = i;
+                        }
+                    }
+                }
+                foundIndex = closestIndex;
+            }
+            
+            currentIndex = foundIndex;
+            tick(true); // force UI update
+        });
+    }
+
     const modes = ['day', 'night', 'normal', 'storm', 'cold'];
     modes.forEach(m => {
         const el = document.getElementById('tgl-' + m);
@@ -222,10 +263,23 @@ function updateVal(id, val, dp=0) {
 }
 
 function tick(skipAdvance=false) {
+    const timeSlider = document.getElementById('time-slider');
+    
+    if (timeSlider && timeSlider.matches(':active')) {
+        skipAdvance = true;
+    }
+
     if (!skipAdvance) currentIndex = (currentIndex + 1) % globalData.length;
     
     const baseRow = globalData[currentIndex];
     if(!baseRow) return;
+
+    const timeLabel = document.getElementById('slider-time-label');
+    if (timeSlider && timeLabel && !timeSlider.matches(':active')) {
+        let currentHour = parseInt(baseRow.timestamp.split(' ')[1].split(':')[0]);
+        timeSlider.value = currentHour;
+        timeLabel.textContent = currentHour.toString().padStart(2, '0') + ':00';
+    }
 
     // Apply simulation physics to the row
     let row = applyOverridesToRow(baseRow, liveSOC);
@@ -353,35 +407,12 @@ function tick(skipAdvance=false) {
 
     updateVal('list-batt-temp', row.temperature + 15, 1); 
 
-    // Alert Ticker
-    const tickerBadge = document.getElementById('ticker-badge');
-    const tickerText = document.getElementById('ticker-text');
-    if(tickerBadge && tickerText) {
-        tickerBadge.className = 'ticker-badge'; // reset
-        if (row.wind_speed > 25.0) {
-            tickerBadge.classList.add('danger');
-            tickerBadge.textContent = 'EXTREME';
-            tickerText.textContent = `WIND CUTOFF (${row.wind_speed.toFixed(1)} m/s) — Turbines locked. Diesel compensating.`;
-        } else if (row.temperature < -40.0) {
-            tickerBadge.classList.add('warning');
-            tickerBadge.textContent = 'COLD SNAP';
-            tickerText.textContent = `EXTREME COLD (${row.temperature.toFixed(1)}°C) — Maximum heating load engaged.`;
-        } else if (row.lp_soc < 0.25) {
-            tickerBadge.classList.add('warning');
-            tickerBadge.textContent = 'LOW SOC';
-            tickerText.textContent = `BATTERY AT ${(row.lp_soc*100).toFixed(0)}% — Prioritizing generator charging.`;
-        } else {
-            tickerBadge.classList.add('safe');
-            tickerBadge.textContent = 'NORMAL';
-            tickerText.textContent = `Grid stable. Temperature ${row.temperature.toFixed(1)}°C. Renewables nominal.`;
-        }
-    }
-    
     // Decision sentence
     document.getElementById('decision-text').textContent = getDecisionText(row);
+
     // TICKER UPDATE
-    const tickerBadge = document.getElementById('ticker-badge');
-    const tickerMsg = document.getElementById('ticker-msg');
+    let tickerBadge = document.getElementById('ticker-badge');
+    let tickerMsg = document.getElementById('ticker-msg');
     if (tickerBadge && tickerMsg) {
         if (overrides.storm) {
             tickerBadge.textContent = "CRITICAL";
@@ -395,6 +426,10 @@ function tick(skipAdvance=false) {
             tickerBadge.textContent = "INFO";
             tickerBadge.className = "ticker-badge safe";
             tickerMsg.textContent = "POLAR NIGHT — Zero solar irradiance. System relying entirely on wind and diesel reserves.";
+        } else if (overrides.day) {
+            tickerBadge.textContent = "INFO";
+            tickerBadge.className = "ticker-badge safe";
+            tickerMsg.textContent = "PEAK DAYTIME — Maximum solar irradiance. Renewables at full capacity.";
         } else if (risk > 70) {
             tickerBadge.textContent = "CRITICAL";
             tickerBadge.className = "ticker-badge danger";

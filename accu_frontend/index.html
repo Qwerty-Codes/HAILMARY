@@ -39,6 +39,10 @@
             </div>
             <div class="header-right" style="display: flex; align-items: center; gap: 16px;">
                 <div class="live-badge"><span class="pulse-dot"></span> LIVE SIMULATION</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;" id="slider-time-label">00:00</span>
+                    <input type="range" id="time-slider" min="0" max="23" value="0" style="width: 120px;">
+                </div>
                 <button id="btn-pause" class="btn-outline">Pause</button>
                 
                 <button class="theme-switch" id="theme-toggle" aria-label="Toggle Theme">
