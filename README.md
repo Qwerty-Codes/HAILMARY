@@ -10,8 +10,7 @@
 
 ## The Problem
 
-India's Antarctic research stations (**Maitri** & **Bharati**) operate in one of the harshest environments on Earth — temperatures plunging below **-40 C**, months of total darkness during polar night, and violent katabatic storms exceeding **200 km/h**. These stations depend heavily on **diesel generators**, with fuel resupply costing **Rs. 250/liter** after accounting for Antarctic logistics. There is no power grid. If the generator fails, people die.
-
+India's Antarctic research stations (**Maitri** & **Bharati**) operate in one of the harshest environments on Earth — temperatures plunging below **-40 C**, months of total darkness during polar night, and violent katabatic storms exceeding **200 km/h**. These stations depend heavily on **diesel generators**, with fuel resupply costing **Rs. 250/liter** after accounting for Antarctic logistics.
 **Current pain points:**
 - Diesel accounts for **~70%** of the station's operational cost
 - Fuel resupply is possible only once a year via icebreaker ships
