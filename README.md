@@ -2,7 +2,7 @@
   <h1 align="center">H A I L M A R Y</h1>
   <p align="center"><strong>AI-Driven Smart Energy Management System for Polar Research Stations</strong></p>
   <p align="center">
-    <em>Built for Smart India Hackathon 2024</em>
+    <em>Built for Smart India Hackathon 2026</em>
   </p>
 </p>
 
@@ -181,7 +181,7 @@ HAILMARY/
 
 ## Team
 
-Built for **Smart India Hackathon 2024**
+Built for **Smart India Hackathon 2026**
 
 ---
 
